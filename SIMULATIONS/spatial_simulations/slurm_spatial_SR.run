@@ -1,0 +1,34 @@
+#!/bin/bash
+#SBATCH --job-name=my_array_job
+#SBATCH --output=output_directory/output_%A_%a.out  # Save output in specific directory
+#SBATCH --error=error_directory/error_%A_%a.err 
+#SBATCH --array=0-499 #length of the dataframe passed as input (i.e. number of networks to map)
+#SBATCH --time=30:00:00  
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
+
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=federica.sibilla@unil.ch
+echo "Starting job"
+# Load necessary modules (if any)
+module load gcc python
+
+# Activate the Python virtual environment
+source /users/fsibilla/env_MES/bin/activate
+
+# Define the directories for output and error logs
+output_dir="output_directory"
+error_dir="error_directory"
+
+# Create output and error directories if they do not exist
+mkdir -p $output_dir
+mkdir -p $error_dir
+
+# Define arrays of parameters
+i=$SLURM_ARRAY_TASK_ID
+
+echo "running spatial_random_F"
+# Run the Python script with the chosen parameters
+python /work/FAC/FBM/DMF/smitri/nccr_microbiomes/federica/MES_spatial/spatial_SR.py $i

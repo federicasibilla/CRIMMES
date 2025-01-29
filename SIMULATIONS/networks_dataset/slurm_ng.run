@@ -1,0 +1,86 @@
+#!/bin/bash
+#SBATCH --job-name=my_array_job
+#SBATCH --output=output_directory/output_%A_%a.out  # Save output in specific directory
+#SBATCH --error=error_directory/error_%A_%a.err   # Save error in specific directory
+#SBATCH --array=0-1599  # Adjust array range based on total combinations
+#SBATCH --time=10:00:00  
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
+
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=federica.sibilla@unil.ch
+
+# Load necessary modules (if any)
+module load gcc python
+
+# Activate the Python virtual environment
+source /users/fsibilla/env_MES/bin/activate
+
+# Define the directories for output and error logs
+output_dir="output_directory"
+error_dir="error_directory"
+
+# Create output and error directories if they do not exist
+mkdir -p $output_dir
+mkdir -p $error_dir
+
+# Define arrays of parameters
+n_supplied_arr=(2)
+n_consumed_arr=(1 2) 
+sparsity_arr=(0.9)
+noise_arr=(1.)
+PCS_var_arr=(0.01)
+PCS_bias_arr=(1 0.5)
+leakage_arr=(0.2 0.8)
+replica_arr=($(seq 101 300))  # Replica array from 1 to 100
+
+# Calculate total number of parameter combinations
+total_combinations=$(( ${#n_supplied_arr[@]} * ${#n_consumed_arr[@]} * ${#sparsity_arr[@]} * ${#noise_arr[@]} * ${#PCS_var_arr[@]} * ${#PCS_bias_arr[@]} * ${#leakage_arr[@]} * ${#replica_arr[@]} ))
+
+# Ensure the array range matches the total combinations
+if [ $SLURM_ARRAY_TASK_ID -ge $total_combinations ]; then
+    echo "Invalid SLURM_ARRAY_TASK_ID: $SLURM_ARRAY_TASK_ID"
+    exit 1
+fi
+
+# Determine indices for this array job
+index=$SLURM_ARRAY_TASK_ID
+
+# Compute indices for parameters
+n_supplied_index=$(( index % ${#n_supplied_arr[@]} ))
+index=$(( index / ${#n_supplied_arr[@]} ))
+
+n_consumed_index=$(( index % ${#n_consumed_arr[@]} ))
+index=$(( index / ${#n_consumed_arr[@]} ))
+
+sparsity_index=$(( index % ${#sparsity_arr[@]} ))
+index=$(( index / ${#sparsity_arr[@]} ))
+
+noise_index=$(( index % ${#noise_arr[@]} ))
+index=$(( index / ${#noise_arr[@]} ))
+
+PCS_var_index=$(( index % ${#PCS_var_arr[@]} ))
+index=$(( index / ${#PCS_var_arr[@]} ))
+
+PCS_bias_index=$(( index % ${#PCS_bias_arr[@]} ))
+index=$(( index / ${#PCS_bias_arr[@]} ))
+
+leakage_index=$(( index % ${#leakage_arr[@]} ))
+index=$(( index / ${#leakage_arr[@]} ))
+
+replica_index=$(( index % ${#replica_arr[@]} ))
+
+# Extract the specific parameters for this task
+n_supplied=${n_supplied_arr[$n_supplied_index]}
+n_consumed=${n_consumed_arr[$n_consumed_index]}
+sparsity=${sparsity_arr[$sparsity_index]}
+noise=${noise_arr[$noise_index]}
+PCS_var=${PCS_var_arr[$PCS_var_index]}
+PCS_bias=${PCS_bias_arr[$PCS_bias_index]}
+leakage=${leakage_arr[$leakage_index]}
+replica=${replica_arr[$replica_index]}
+
+# Run the Python script with the chosen parameters
+python /work/FAC/FBM/DMF/smitri/nccr_microbiomes/federica/MES_networks_generation/networks_generation.py $n_supplied $n_consumed $sparsity $noise $PCS_var $PCS_bias $leakage $replica

@@ -1,0 +1,71 @@
+#!/bin/bash
+#SBATCH --job-name=my_array_job
+#SBATCH --output=output_directory/output_%A_%a.out  # Save output in specific directory
+#SBATCH --error=error_directory/error_%A_%a.err   # Save error in specific directory
+#SBATCH --array=0-3919   # Adjusted array range based on total combinations
+#SBATCH --time=10:00:00  
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
+
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=federica.sibilla@unil.ch
+
+# Load necessary modules (if any)
+module load gcc python
+
+# Activate the Python virtual environment
+source /users/fsibilla/env_MES/bin/activate
+
+# Define the directories for output and error logs
+output_dir="output_directory"
+error_dir="error_directory"
+
+# Create output and error directories if they do not exist
+mkdir -p $output_dir
+mkdir -p $error_dir
+
+# Define arrays of parameters
+n_consumed_values=(1 2 3 4 6 10 15)
+n_producers_values=(1 2 3 4 5 6 7)
+leakage_values=(0.2 0.8)
+PCS_bias_values=(1)
+PCS_var_values=(0.1 0.001)
+replica_values=($(seq 100 120))
+
+# Calculate total number of parameter combinations
+total_combinations=$(( ${#n_consumed_values[@]} * ${#n_producers_values[@]} * ${#leakage_values[@]} * ${#PCS_bias_values[@]} * ${#PCS_var_values[@]} * ${#replica_values[@]} ))
+
+# Ensure the array range matches the total combinations
+if [ $SLURM_ARRAY_TASK_ID -ge $total_combinations ]; then
+    echo "Invalid SLURM_ARRAY_TASK_ID: $SLURM_ARRAY_TASK_ID"
+    exit 1
+fi
+
+# Determine indices for this array job
+index=$SLURM_ARRAY_TASK_ID
+
+# Calculate the specific indices for each parameter array
+n_consumed_idx=$(( index % ${#n_consumed_values[@]} ))
+index=$(( index / ${#n_consumed_values[@]} ))
+n_producers_idx=$(( index % ${#n_producers_values[@]} ))
+index=$(( index / ${#n_producers_values[@]} ))
+leakage_idx=$(( index % ${#leakage_values[@]} ))
+index=$(( index / ${#leakage_values[@]} ))
+PCS_bias_idx=$(( index % ${#PCS_bias_values[@]} ))
+index=$(( index / ${#PCS_bias_values[@]} ))
+PCS_var_idx=$(( index % ${#PCS_var_values[@]} ))
+index=$(( index / ${#PCS_var_values[@]} ))
+replica_idx=$(( index % ${#replica_values[@]} ))
+
+# Extract the specific parameters for this task
+n_consumed=${n_consumed_values[$n_consumed_idx]}
+n_producers=${n_producers_values[$n_producers_idx]}
+leakage=${leakage_values[$leakage_idx]}
+PCS_bias=${PCS_bias_values[$PCS_bias_idx]}
+PCS_var=${PCS_var_values[$PCS_var_idx]}
+replica=${replica_values[$replica_idx]}
+
+# Run the Python script with the chosen parameters
+python /work/FAC/FBM/DMF/smitri/nccr_microbiomes/federica/MES_aux_sensitivity_wm/parameters_sensitivity.py $n_consumed $n_producers $leakage $PCS_bias $PCS_var $replica
