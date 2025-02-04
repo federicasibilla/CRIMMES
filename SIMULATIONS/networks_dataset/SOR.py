@@ -16,6 +16,8 @@ CONTAINS: - SOR_2D: a Dirichlet BC setting where a frame of the grid has fixed c
 
 import numpy as np
 
+import sys
+
 
 from time import time
 
@@ -79,6 +81,10 @@ def SOR_2D(N, param, mat, source, initial_guess):
 
         if (np.abs(delta[1:-1,1:-1]/(best_BC[2:n,2:n]+1e-12))<=0.001).all():
                 break
+
+        if (padded_R<0).any():
+             print('numerical instabilities')
+             sys.exit()
 
         # extract biggest update
         delta_list.append(np.max(np.abs(delta)))
@@ -180,6 +186,10 @@ def SOR_3D(N, param, mat, source, initial_guess):
         if (np.abs(delta[1:-1,1:-1]/(padded_R[2:n,2:n,1]+1e-14))<=stop).all():
                 break
 
+        if (padded_R<0).any():
+             print('numerical instabilities')
+             sys.exit()
+
         # extract biggest update
         delta_list.append(np.max(np.abs(delta)))
 
@@ -279,6 +289,10 @@ def SOR_3D_noflux(N, param, mat, source, initial_guess):
 
         if (np.abs(delta[1:-1,1:-1]/(padded_R[2:n,2:n,1]+1e-14))<=stop).all():
                 break
+
+        if (padded_R<0).any():
+             print('numerical instabilities')
+             sys.exit()
 
         # no flux for the next iteration
         padded_R[1:n+1,1:n+1,2,:]=padded_R[1:n+1,1:n+1,1,:]
