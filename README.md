@@ -2,6 +2,8 @@
 **Repository for Federica Sibilla's Master Thesis Project**  
 **Collaborators:** Simon van Vliet, Alessia del Panta  
 
+Check the environment.yml file for requirements.
+
 ---
 
 ## **CONTENT**  
